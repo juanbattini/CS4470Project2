@@ -10,13 +10,19 @@ class UDPServer {
 	
 	private DatagramSocket serverSocket;
 	private DatagramSocket clientSocket;
+	// topology init
+	public int numOfServers;
+	public int numOfNeighbors;
 	private int id;
+	private int port;
+	private int updateInterval;
 	private static String[][] servers = new String[4][3]; // id, destination, port of other servers
 	private static int[][] costs = new int[4][4];
 	private int[] neighbors = null; // IDs of neighbors
 	private Thread sender;
 	private Thread receiver;
-	public int numOfServers = 4;
+	
+	
 	public static int inf = Integer.MAX_VALUE; 
 	
 	public static void main(String args[]) throws Exception {
@@ -69,24 +75,26 @@ class UDPServer {
 	
 	
 	
-	public void buildTopology(){
-		StringBuffer outputBuffer = new StringBuffer();
-		
-		
-		outputBuffer.append("-----------Topology-----------\n");
-		outputBuffer.append(String.valueOf(numOfServers)+"\n");
-		outputBuffer.append(String.valueOf(neighbors.length)+"\n");
-		for(int i = 0; i < numOfServers; i++){
-			outputBuffer.append(servers[i][0]+" "+servers[i][1]+" "+servers[i][2]+"\n");
-		}
-		for(int i = 0; i < neighbors.length; i++){
-			outputBuffer.append(this.id+" "+neighbors[i]+" "+costs[this.id-1][i]+"\n");
-		}
-		
-		println(outputBuffer.toString());
-//		return outputBuffer.toString();
-		
-	}
+//	public void buildTopology(){
+//		StringBuffer outputBuffer = new StringBuffer();
+//		
+//		
+//		outputBuffer.append("-----------Topology-----------\n");
+//		outputBuffer.append(String.valueOf(numOfServers)+"\n");
+//		outputBuffer.append(String.valueOf(neighbors.length)+"\n");
+//		for(int i = 0; i < numOfServers; i++){
+//			outputBuffer.append(servers[i][0]+" "+servers[i][1]+" "+servers[i][2]+"\n");
+//		}
+//		for(int i = 0; i < neighbors.length; i++){
+//			outputBuffer.append(this.id+" "+neighbors[i]+" "+costs[this.id-1][i]+"\n");
+//		}
+//		
+//		println(outputBuffer.toString());
+////		return outputBuffer.toString();
+//		
+//	}
+	
+	
 	
 	// Communication Threads
 	public void defineCommThreads(DatagramSocket serverSocket, int id) {
@@ -192,12 +200,13 @@ class UDPServer {
 	private void CMD(String cmd){
 		String[] args = cmd.split(" ");
 		switch (args[0]) {
-		case "server": 
+		case "server": // server -t <topology-file-name> -i <routing-update-interval>
 			if(args.length != 5){
 				println("ERROR: Invalid server command!");
 				break;
 			} else {
-				println(args[2]);
+				openTopo(args[2]);
+				this.updateInterval = Integer.parseInt(args[4]);
 			}
 			break;
 	    case "close":
@@ -205,29 +214,40 @@ class UDPServer {
     	  serverSocket.close();
     	  System.exit(0);
     	  break;
-	    case "topo":
-    	  buildTopology();
-    	  break;
 	    }
 	}
 	
 	// OPEN topology file SERVER COMMAND
-	private ArrayList<String> openTopo(String filename){
-	  ArrayList<String> records = new ArrayList<String>();
-	  try{
-	    BufferedReader reader = new BufferedReader(new FileReader(filename));
-	    String line;
-	    while ((line = reader.readLine()) != null){
-	      records.add(line);
-	    }
-	    reader.close();
-	    return records;
-	  }
-	  catch (Exception e){
-	    System.err.format("Exception occurred trying to read '%s'.", filename);
-	    e.printStackTrace();
-	    return null;
-	  }
+	private void openTopo(String filename){
+		  ArrayList<String> records = new ArrayList<String>();
+		  try{
+		    BufferedReader reader = new BufferedReader(new FileReader(filename));
+		    String line;
+		    while ((line = reader.readLine()) != null){
+		      records.add(line);
+		    }
+		    reader.close();
+		  }
+		  catch (Exception e){
+		    System.err.format("Exception occurred trying to read '%s'.", filename);
+		    e.printStackTrace();
+		  }
+		  // GET num of servers
+		  String nosarr[] = records.get(0).split(" ");
+		  this.numOfServers = Integer.parseInt(nosarr[0]);
+		  // GET num of neighbors
+		  String nonarr[] = records.get(0).split(" ");
+		  this.numOfNeighbors = Integer.parseInt(nonarr[0]);
+		  // GET ID
+		  String idarr[] = records.get(6).split(" ");
+		  this.id = Integer.parseInt(idarr[0]);
+		  // GET Port
+		  for(int i = 2; i < this.numOfServers+2; i++){
+			  String arr[] = records.get(i).split(" ");
+			  if(this.id == Integer.parseInt(arr[0])){
+				  this.port = Integer.parseInt(arr[2]);
+			  }
+		  }
 	}
 	
 	
