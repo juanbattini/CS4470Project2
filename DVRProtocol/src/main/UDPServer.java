@@ -7,68 +7,158 @@ import static main.SysoutWrapper.*;
 
 class UDPServer {
 	
-	private static DatagramSocket serverSocket;
-	private static int id;
-	private static int numOfServers = 4;
-	private static int[] neighborIds;
+	private DatagramSocket serverSocket;
+	private int id;
+	private String[][][] servers; // id, destination, port of other servers
+	private int[] neighbors; // IDs of neighbors
+	private Thread sender;
+	private Thread receiver;
 	
+	public int numOfServers = 4;
+
+	public UDPServer(int id, int port){
+		this.id = id;
+		try {
+			this.serverSocket = new DatagramSocket(port);
+		} catch (SocketException e) {
+			println("ERROR: could not create server socket for server id " + this.id);
+			e.printStackTrace();
+		}
+		this.defineCommThreads(this.serverSocket, id);
+	}
+	
+	public InetAddress getIPAddress(){
+		try {
+			return InetAddress.getLocalHost();
+		} catch (UnknownHostException e) {
+			println("ERROR: Couldn't get Local Host from server id "+this.id);
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public int getServerPort() {
+		return this.serverSocket.getLocalPort();
+	}
+	
+	public void buildTopology(){
+		StringBuffer outputBuffer = new StringBuffer();
 		
-	public static int getServerPort() {
-		return serverSocket.getPort();
+		
+		outputBuffer.append("-----------Topology-----------\n");
+		outputBuffer.append(String.valueOf(numOfServers));
+		
+		println(outputBuffer.toString());
+//		return outputBuffer.toString();
+		
+	}
+	
+	public void defineCommThreads(DatagramSocket serverSocket, int id) {
+		
+		
+		// Define Communication Threads
+		// SENDER Thread
+		this.sender = new Thread() {
+  		    public void run() {
+  		    	  DatagramSocket clientSocket = null;
+				try {
+					clientSocket = new DatagramSocket();
+				} catch (SocketException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+	  		      while(true) {
+	  		    	  print("Server>");
+	  		    	  BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+	  		    	  
+		  		      InetAddress IPAddress = null;
+		  		      try {
+		  		    	  IPAddress = InetAddress.getLocalHost();
+		  		      } catch (UnknownHostException e) {
+		  		    	  // TODO Auto-generated catch block
+		  		    	  e.printStackTrace();
+		  		      }
+		  		      byte[] sendData = new byte[1024];
+		  		      byte[] receiveData = new byte[1024];
+		  		      String sentence = null;
+					  try {
+						  sentence = inFromUser.readLine();
+					  } catch (IOException e) {
+						  // TODO Auto-generated catch block
+						  e.printStackTrace();
+					  }
+		  		      sendData = sentence.getBytes();
+		  		      int serverPort = 9876;
+		  		      DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, serverPort);
+			  		  try {
+							clientSocket.send(sendPacket);
+			  		  } catch (IOException e) {
+			  			  // TODO Auto-generated catch block
+			  			  e.printStackTrace();
+			  		  }
+		  		      DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+		  		      try {
+		  		    	  clientSocket.receive(receivePacket);
+		  		      } catch (IOException e) {
+		  		    	  // TODO Auto-generated catch block
+		  		    	  e.printStackTrace();
+		  		      }
+		  		      String modifiedSentence = new String(receivePacket.getData());
+		  		      println("FROM SERVER:" + modifiedSentence);
+		  		      if (sentence.trim().equals("close")){
+		  		    	  clientSocket.close();
+		  		      }
+		  		      
+		  		      sendData = null;
+		  		      receiveData = null;
+		  		      
+	  		      }
+	  		      
+  		    }
+		};
+		// RECEIVER Thread
+		this.receiver = new Thread() {
+			public void run() {
+	  		      while(true) {
+	  		    	  	byte[] receiveData = new byte[1024];
+	  		    	  	byte[] sendData = new byte[1024];
+		  		    	DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+		  		    	try {
+		  					serverSocket.receive(receivePacket);
+		  				} catch (IOException e) {
+		  					println("ERROR: server socket receive failed for server id " + id);
+		  					e.printStackTrace();
+		  				}
+		  		    	String sentence = new String( receivePacket.getData());
+		  		    	println("RECEIVED: " + sentence);
+		  	            InetAddress IPAddress = receivePacket.getAddress();
+		  	            int port = receivePacket.getPort();
+		  		    	String capitalizedSentence = sentence.toUpperCase();
+		  	            sendData = capitalizedSentence.getBytes();
+		  	            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+		  	            try {
+			  				serverSocket.send(sendPacket);
+			  			} catch (IOException e) {
+			  				println("ERROR: server socket send failed for server id " + id);
+			  				e.printStackTrace();
+			  			}
+		  	            receiveData = null;
+		  	            sendData = null;
+	  		      }
+  		    }
+		};
+	}
+	
+	// Start Server
+	public void start() {
+		sender.start();		//run sender thread
+		receiver.start();	//run receiver thread
 	}
 
 	public static void main(String args[]) throws Exception {
-        byte[] receiveData = new byte[1024];
-        byte[] sendData = new byte[1024];
-        
-       
-        //console-> java main.UDPServer 2
-        //create server id:2
-        
-        switch(Integer.parseInt(args[0])) {
-        	case 1: serverSocket = new DatagramSocket(9111);
-        			id = 1;
-        			neighborIds = new int[3];
-        			neighborIds[0] = 2;
-        			neighborIds[1] = 3;
-        			neighborIds[2] = 4;
-        			break;
-        	case 2: serverSocket = new DatagramSocket(9222);
-        			id = 2;
-        			neighborIds = new int[2];
-        			neighborIds[0] = 1;
-        			neighborIds[1] = 3;
-        			
-					break;
-        	case 3: serverSocket = new DatagramSocket(4333);
-        			id = 3;
-        			neighborIds = new int[3];
-        			neighborIds[0] = 1;
-        			neighborIds[1] = 2;
-        			neighborIds[2] = 4;
-					break;
-        	case 4: serverSocket = new DatagramSocket(4444);
-        			id = 4;
-        			neighborIds = new int[2];
-        			neighborIds[0] = 1;
-        			neighborIds[1] = 3;
-					break;
-        }
-        
-        
-        
-        
-        while(true){
-              DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-              serverSocket.receive(receivePacket);
-              String sentence = new String( receivePacket.getData());
-              println("RECEIVED: " + sentence);
-              InetAddress IPAddress = receivePacket.getAddress();
-              int port = receivePacket.getPort();
-              String capitalizedSentence = sentence.toUpperCase();
-              sendData = capitalizedSentence.getBytes();
-              DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-              serverSocket.send(sendPacket);
-        }
+		UDPServer server = new UDPServer(Integer.parseInt(args[0]), Integer.parseInt(args[1]));
+		server.start();
 	}
+
+	
 }
