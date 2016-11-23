@@ -2,12 +2,14 @@ package main;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 
 import static main.SysoutWrapper.*;
 
 class UDPServer {
 	
 	private DatagramSocket serverSocket;
+	private DatagramSocket clientSocket;
 	private int id;
 	private static String[][] servers = new String[4][3]; // id, destination, port of other servers
 	private static int[][] costs = new int[4][4];
@@ -52,6 +54,7 @@ class UDPServer {
 		server.start(); // starts sender input thread and data receiver thread
 	}
 
+	// Constructor
 	public UDPServer(int id){
 		this.id = id;
 		int port = Integer.parseInt(servers[id-1][2]);
@@ -64,40 +67,33 @@ class UDPServer {
 		this.defineCommThreads(this.serverSocket, id);
 	}
 	
-	public InetAddress getIPAddress(){
-		try {
-			return InetAddress.getLocalHost();
-		} catch (UnknownHostException e) {
-			println("ERROR: Couldn't get Local Host from server id "+this.id);
-			e.printStackTrace();
-		}
-		return null;
-	}
 	
-	public int getServerPort() {
-		return this.serverSocket.getLocalPort();
-	}
 	
 	public void buildTopology(){
 		StringBuffer outputBuffer = new StringBuffer();
 		
 		
 		outputBuffer.append("-----------Topology-----------\n");
-		outputBuffer.append(String.valueOf(numOfServers));
+		outputBuffer.append(String.valueOf(numOfServers)+"\n");
+		outputBuffer.append(String.valueOf(neighbors.length)+"\n");
+		for(int i = 0; i < numOfServers; i++){
+			outputBuffer.append(servers[i][0]+" "+servers[i][1]+" "+servers[i][2]+"\n");
+		}
+		for(int i = 0; i < neighbors.length; i++){
+			outputBuffer.append(this.id+" "+neighbors[i]+" "+costs[this.id-1][i]+"\n");
+		}
 		
 		println(outputBuffer.toString());
 //		return outputBuffer.toString();
 		
 	}
 	
+	// Communication Threads
 	public void defineCommThreads(DatagramSocket serverSocket, int id) {
-		
-		
 		// Define Communication Threads
 		// SENDER Thread
 		this.sender = new Thread() {
   		    public void run() {
-  		    	  DatagramSocket clientSocket = null;
 				try {
 					clientSocket = new DatagramSocket();
 				} catch (SocketException e1) {
@@ -125,7 +121,12 @@ class UDPServer {
 						  e.printStackTrace();
 					  }
 		  		      sendData = sentence.getBytes();
+		  		      
+		  		      
 		  		      int serverPort = 9876;
+		  		      
+		  		      
+		  		      
 		  		      DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, serverPort);
 			  		  try {
 							clientSocket.send(sendPacket);
@@ -142,10 +143,10 @@ class UDPServer {
 		  		      }
 		  		      String modifiedSentence = new String(receivePacket.getData());
 		  		      println("FROM SERVER:" + modifiedSentence);
-		  		      if (sentence.trim().equals("close")){
-		  		    	  clientSocket.close();
-		  		      }
 		  		      
+		  		 //=====---- COMMANDS ----=====\\
+		  		      CMD(sentence);
+		  		 //=====------------------=====\\
 		  		      sendData = null;
 		  		      receiveData = null;
 		  		      
@@ -187,13 +188,70 @@ class UDPServer {
 		};
 	}
 	
+	// COMMAND FUNCTION
+	private void CMD(String cmd){
+		String[] args = cmd.split(" ");
+		switch (args[0]) {
+		case "server": 
+			if(args.length != 5){
+				println("ERROR: Invalid server command!");
+				break;
+			} else {
+				println(args[2]);
+			}
+			break;
+	    case "close":
+    	  clientSocket.close();
+    	  serverSocket.close();
+    	  System.exit(0);
+    	  break;
+	    case "topo":
+    	  buildTopology();
+    	  break;
+	    }
+	}
+	
+	// OPEN topology file SERVER COMMAND
+	private ArrayList<String> openTopo(String filename){
+	  ArrayList<String> records = new ArrayList<String>();
+	  try{
+	    BufferedReader reader = new BufferedReader(new FileReader(filename));
+	    String line;
+	    while ((line = reader.readLine()) != null){
+	      records.add(line);
+	    }
+	    reader.close();
+	    return records;
+	  }
+	  catch (Exception e){
+	    System.err.format("Exception occurred trying to read '%s'.", filename);
+	    e.printStackTrace();
+	    return null;
+	  }
+	}
+	
+	
+	
 	// Start Server
 	public void start() {
 		sender.start();		//run sender thread
 		receiver.start();	//run receiver thread
 	}
-
 	
+	//-------GET FUNCTIONS-----------
+	public InetAddress getIPAddress(){
+		try {
+			return InetAddress.getLocalHost();
+		} catch (UnknownHostException e) {
+			println("ERROR: Couldn't get Local Host from server id "+this.id);
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public int getServerPort() {
+		return this.serverSocket.getLocalPort();
+	}
 
 	
 }
