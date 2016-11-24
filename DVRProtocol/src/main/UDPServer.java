@@ -207,16 +207,16 @@ class UDPServer {
 		    System.err.format("Exception occurred trying to read '%s'.", filename);
 		    e.printStackTrace();
 		  }
-		  // GET num of servers from topo
+		  // GET number of servers from topology
 		  String nosarr[] = records.get(0).split(" ");
 		  this.numOfServers = Integer.parseInt(nosarr[0]);
-		  // GET num of neighbors from topo
+		  // GET number of neighbors from topology
 		  String nonarr[] = records.get(1).split(" ");
 		  this.numOfNeighbors = Integer.parseInt(nonarr[0]);
-		  // GET ID from topo
+		  // GET ID from topology
 		  String idarr[] = records.get(6).split(" ");
 		  this.id = Integer.parseInt(idarr[0]);
-		  // GET Port from topo
+		  // GET Port from topology
 		  for(int i = 2; i < numOfServers+2; i++){
 			  String arr[] = records.get(i).split(" ");
 			  // 	--id-- 				 --IP destination--				--port--
@@ -225,25 +225,47 @@ class UDPServer {
 				  this.port = Integer.parseInt(arr[2]);
 			  }
 		  }
-		  //Get neighbors IDs
+		  //Get neighbors IDs from topology
 		  neighbors = new int[numOfNeighbors];
 		  for(int i = 2+numOfServers; i < 2+numOfServers+numOfNeighbors; i++){
 			  String arr[] = records.get(i).split(" ");
 			  neighbors[i-(2+numOfServers)]=Integer.parseInt(arr[1]);
-			  println(Integer.parseInt(arr[1]));
 		  }
 		  
 	}
 	
 	// Routing Update on time interval
 	private void routingUpdate(int seconds){
+
 		Runnable broadcast = new Runnable() {
+			
 		    public void run() {
+		    	byte[] sendData = new byte[1024];
+				byte[] receiveData = new byte[1024];
+		    	InetAddress IPAddress = null;
+				try {
+					IPAddress = InetAddress.getLocalHost();
+				} catch (UnknownHostException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 		        for(int i = 0; i < neighbors.length; i++){
-		        	println("send this to "+neighbors[i]);
+//		        			         	  --id-- 				           --IP destination--				        --port--
+//		            println("send this to "+servers[neighbors[i]-1][0]+" "+servers[neighbors[i]-1][1]+" "+servers[neighbors[i]-1][2]);
+		        	sendData = new byte[1024];
+					receiveData = new byte[1024];
+					String data = "sent from id " + id;
+					sendData = data.getBytes();
+					int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
+					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+					try {
+						clientSocket.send(sendPacket);
+					} catch (IOException e) {
+						
+						println("Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
+						e.printStackTrace();
+					}
 		        }
-		        
-		        
 		    }
 		};
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
