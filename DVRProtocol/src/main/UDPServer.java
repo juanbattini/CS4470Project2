@@ -19,10 +19,18 @@ class UDPServer {
 	private int id;
 	private int port;
 	private int updateInterval;
-	private static String[][] servers = new String[4][3]; // id, destination, port of other servers
+	private static String[][] servers = new String[4][4]; // 0:id, 1:destination, 2:port of other servers, 3:online(1=true, 0=false) 
 //	private static int[][] costs = new int[4][4];
 	private static int[] costs = new int[4];
-	private int[][] neighbors; // 0:id, 1:time interval, 2:online (1=true, 0=false)
+	private static int[] initCosts = new int[4];
+	private int[] 	neighbors; // neighbor ids,
+	private int[]	timeIntervals = new int[4];
+	private int[]	receivedPackets = new int[4];
+	private int[]	missedPackets = new int[4];
+	private int[]	secondsMissed = new int[4];
+	
+	
+	
 	private Thread sender;
 	private Thread receiver;
 	public static int inf = Integer.MAX_VALUE; 
@@ -117,34 +125,25 @@ class UDPServer {
 		  		    		// 3rd is the cost from the sending server
 		  		    		int cost = Integer.parseInt(args[2]);
 		  		    		// 4th is time interval from sending server
-		  		    		int interval = Integer.parseInt(args[3]);
-		  		    		
-		  		    		for(int i = 0; i < neighbors.length; i++){
-		  		    			if(neighbors[i][0] == id){
-				  		    		costs[id-1] = cost;			//neighbor cost
-				  		    		neighbors[i][1]=interval; 	//neighbor routing update time interval
-				  		    		neighbors[i][2]=1; 			//neighbor online status = 1(true)
-		  		    			}
-		  		    		}	
+		  		    		int interval = Integer.parseInt(args[3].trim());
+		  		    		servers[id-1][3] 		= "1"; 		// server is online
+		  		    		costs[id-1] 			= cost;		//neighbor cost
+		  		    		timeIntervals[id-1] 	= interval; // set time interval of server of that id
+		  		    		receivedPackets[id-1] 	+= 1;		// increase packets received by one for that id
+		  		    		secondsMissed[id-1]		= 0;
+//		  		    		for(int i = 0; i < neighbors.length; i++){
+//		  		    			if(neighbors[i] == id){
+//
+//		  		    			}
+//		  		    		}	
 		  		    	}
+		  		    	
 		  		    	
 		  		    	if(args[0].equals("TEST")){ // Receiving test packet
 		  		    		println("Test: " + sentence);
 		  		    	}
 		  		    	
-		  		    	println("Server>");
-		  		    	
-//		  	            InetAddress IPAddress = receivePacket.getAddress();
-//		  	            int port = receivePacket.getPort();
-		  		    	//String capitalizedSentence = sentence.toUpperCase();
-		  	            //sendData = capitalizedSentence.getBytes();
-//		  	            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-//		  	            try {
-//			  				serverSocket.send(sendPacket);
-//			  			} catch (IOException e) {
-//			  				println("ERROR: server socket send failed for server id " + id);
-//			  				e.printStackTrace();
-//			  			}
+//		  		    	println("Server>");
 		  		    	
 		  	            receiveData = null;
 		  	            sendData = null;
@@ -166,6 +165,7 @@ class UDPServer {
 				this.updateInterval = Integer.parseInt(args[4]);
 				openServerSocket(this.id, this.port);
 				routingUpdate(this.updateInterval);
+				checkDisconnect();
 			}
 			break;
 	    
@@ -192,11 +192,10 @@ class UDPServer {
 		      records.add(line);
 		    }
 		    reader.close();
-		  }
-		  catch (Exception e){
+		  } catch (Exception e){
 		    System.err.format("Exception occurred trying to read '%s'.", filename);
 		    e.printStackTrace();
-		  }
+		  } 
 		  // GET number of servers from topology
 		  String nosarr[] = records.get(0).split(" ");
 		  this.numOfServers = Integer.parseInt(nosarr[0]);
@@ -219,18 +218,19 @@ class UDPServer {
 		  // Set initial costs to infinity
 		  for(int i = 0; i < numOfServers; i++){
 			  if(i+1 == id){
-				  costs[i] = 0;
+				  initCosts[i] = 0;
 			  } else {
 				  costs[i] = inf;
 			  }
 		  }
 		  //Get neighbors IDs and costs from topology
-		  neighbors = new int[numOfNeighbors][4];
+		  neighbors = new int[numOfNeighbors];
 		  for(int i = 2+numOfServers; i < 2+numOfServers+numOfNeighbors; i++){
 			  String arr[] = records.get(i).split(" ");
-			  neighbors[i-(2+numOfServers)][0]=Integer.parseInt(arr[1]); // set neighbor id
-			  costs[Integer.parseInt(arr[1])-1] = Integer.parseInt(arr[2]); // set neighbor costs
+			  neighbors[i-(2+numOfServers)]=Integer.parseInt(arr[1]); // set neighbor id
+			  initCosts[Integer.parseInt(arr[1])-1] = Integer.parseInt(arr[2]); // set neighbor costs
 		  }
+		  
 	}
 	
 	// Routing Update on time interval
@@ -251,14 +251,16 @@ class UDPServer {
 //		            println("send this to "+servers[neighbors[i]-1][0]+" "+servers[neighbors[i]-1][1]+" "+servers[neighbors[i]-1][2]);
 		        	sendData = new byte[1024];
 					receiveData = new byte[1024];
-					String data = "sent from id " + id;
+					String data = "UPDATE "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+
 					sendData = data.getBytes();
-					int sendToPort = Integer.parseInt(servers[neighbors[i][0]-1][2]);
+//					int sendToPort = Integer.parseInt(servers[neighbors[i][0]-1][2]);
+					int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
 					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
 					try {
 						clientSocket.send(sendPacket);
 					} catch (IOException e) {
-						println("Couldn't send packet to id: " + servers[neighbors[i][0]-1][0] + ", port: "+ sendToPort);
+						println("Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
 						e.printStackTrace();
 					}
 		        }
@@ -268,19 +270,36 @@ class UDPServer {
 		executor.scheduleAtFixedRate(broadcast, 0, seconds, TimeUnit.SECONDS);
 	}
 	
+	private void checkDisconnect(){
+		for (int i=0; i < numOfServers; i++) {
+    		secondsMissed[i]=0;
+    	}
+		Runnable checkDisconnects = new Runnable() {
+		    public void run() {
+		    	for (int i=0; i < numOfServers; i++) {
+		    		secondsMissed[i] += 1;
+		    		if (secondsMissed[i] > timeIntervals[i]*3 && (i+1) != id) {
+			    		costs[i] = inf;
+			    	}
+		    	}
+		    	display();
+		    }
+		};
+		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+		executor.scheduleAtFixedRate(checkDisconnects, 0, 1, TimeUnit.SECONDS);
+	}
 	
 	public void display(){
 		  println("====Routing Table====");
-		  println("To | Cost");
+		  println("To | Cost | Time | PRcv | PMis | Smis");
 		  for(int i = 0; i < numOfServers; i++){
-			  println(servers[i][0]+"  | "+costs[i]);
+			  if(costs[i] == inf){
+				  println(servers[i][0]+"  | inf    | "+timeIntervals[i]+"    | "+receivedPackets[i]+"    | "+missedPackets[i]+"    | "+secondsMissed[i]);
+			  } else {
+				  println(servers[i][0]+"  | "+costs[i]+"    | "+timeIntervals[i]+"    | "+receivedPackets[i]+"    | "+missedPackets[i]+"    | "+secondsMissed[i]);
+			  }
 		  }
-		  println("-------------------------------");
-		  println("id | tm | on");
-		  for(int i = 0; i < numOfNeighbors; i++){
-			  println(neighbors[i][0]+"  | "+neighbors[i][1]+"  | "+neighbors[i][2]);
-		  }
-		
+
 		  println("=====================");
 	}
 	
