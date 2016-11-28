@@ -6,9 +6,10 @@ import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.nio.ByteBuffer; 
+import java.io.ByteArrayOutputStream; 
 
 import static main.SysoutWrapper.*;
-
 class UDPServer {
 	private static UDPServer server;
 	private DatagramSocket serverSocket;
@@ -168,16 +169,34 @@ class UDPServer {
 				checkDisconnect();
 			}
 			break;
-	    
+
+		case "update":
+			if(args.length != 4) {
+				println("ERROR: invalid server command!");
+				break;
+			} else {
+				//
+			}
+			break;
+		case "step":
+
+			break;
 	    case "display":
 	    	display();
 	    	break;
+		case "disable":
+			if(args.length != 2) {
+				println("ERROR: Invalid server command!");
+				break;
+			} else {
+				//find server by ID and call close method on socket 
+			}
+			break;
 	    case "close":
 	    	  clientSocket.close();
 	    	  serverSocket.close();
 	    	  System.exit(0);
 	    	  break;
-    	  
 	    }
 	}
 	
@@ -233,6 +252,7 @@ class UDPServer {
 		  
 	}
 	
+
 	// Routing Update on time interval
 	private void routingUpdate(int seconds){
 		Runnable broadcast = new Runnable() {
@@ -252,11 +272,14 @@ class UDPServer {
 		        	sendData = new byte[1024];
 					receiveData = new byte[1024];
 					String data = "UPDATE "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
-
+					println(sendData);
 					sendData = data.getBytes();
 //					int sendToPort = Integer.parseInt(servers[neighbors[i][0]-1][2]);
 					int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
 					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+
+					convertToGMF(sendPacket);
+
 					try {
 						clientSocket.send(sendPacket);
 					} catch (IOException e) {
@@ -270,6 +293,29 @@ class UDPServer {
 		executor.scheduleAtFixedRate(broadcast, 0, seconds, TimeUnit.SECONDS);
 	}
 	
+	private void convertToGMF(DatagramPacket packet) {
+		//	byte[] buffer = new byte[1024]; 
+		//	println(new String(buffer, 0, p.getLength()));
+		/*
+		ByteBuffer b = ByteBuffer.wrap(p.getData());
+
+		byte srvrPort = b.get();
+		byte srvrIP = b.get();
+		byte nsrvrIP = b.get();
+		byte nsrvrPort = b.get();
+		int nsrvrID = b.get();
+		int cost = b.getInt();
+
+		println("convert to general format: " + srvrPort + " " + srvrIP + " " + nsrvrIP + " " + nsrvrPort + " " +
+			nsrvrID + " " + cost );
+		*/
+		byte[] buffer = new byte[1024];
+		String message = new String(buffer, 0, packet.getLength());
+
+		println(message);
+	}
+
+
 	private void checkDisconnect(){
 		for (int i=0; i < numOfServers; i++) {
     		secondsMissed[i]=0;
@@ -299,7 +345,7 @@ class UDPServer {
 				  println(servers[i][0]+"  | "+costs[i]+"    | "+timeIntervals[i]+"    | "+receivedPackets[i]+"    | "+missedPackets[i]+"    | "+secondsMissed[i]);
 			  }
 		  }
-
+		
 		  println("=====================");
 	}
 	
@@ -335,5 +381,5 @@ class UDPServer {
 		return this.serverSocket.getLocalPort();
 	}
 
-	
+
 }
