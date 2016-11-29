@@ -143,12 +143,21 @@ class UDPServer {
 			  		    		int fromID = Integer.parseInt(args[1]);
 			  		    		
 			  		    		// 4th is cost of link
-			  		    		int cost = Integer.parseInt(args[3].trim());
+			  		    		int cost;
+			  		    		if(args[3].trim().equals("inf")){
+			  		    			cost = inf;
+			  		    		} else {
+			  		    			cost = Integer.parseInt(args[3].trim());
+			  		    		}
+			  		    		
 			  		    		servers[fromID-1][3] 		= "1"; 		// server is online
 			  		    		costs[fromID-1] 			= cost;		//neighbor cost
 			  		    		receivedPackets[fromID-1] 	+= 1;		// increase packets received by one for that id
 			  		    		secondsMissed[fromID-1]		= 0;		// reset miss timer
 			  		    		println("RECEIVED A MESSAGE FROM SERVER "+fromID);
+		  		    		}
+		  		    		for(int i= 0; i < 4; i++){
+		  		    			println(costs[i]);
 		  		    		}
 		  		    		
 		  		    	}
@@ -187,10 +196,9 @@ class UDPServer {
 			} else {
 				int id1 = Integer.parseInt(args[1]);
 				int id2 = Integer.parseInt(args[2]);
-				int cost = Integer.parseInt(args[3]);
+				String cost = args[3];
 				update(id1, id2, cost);
 			}
-			
 			break;	
 		case "step":
 			step();
@@ -223,8 +231,12 @@ class UDPServer {
 	    case "crash":
 	    	  clientSocket.close();
 	    	  serverSocket.close();
-	    	  System.exit(0);
 	    	  break;
+	    case "close":
+	    	  clientSocket.close();
+	    	  serverSocket.close();
+	    	  System.exit(0);
+	    	  break;  
     	  
 	    }
 	}
@@ -307,6 +319,7 @@ class UDPServer {
 			  String arr[] = records.get(i).split(" ");
 			  neighbors[i-(2+numOfServers)]=Integer.parseInt(arr[1]); // set neighbor id
 			  initCosts[Integer.parseInt(arr[1])-1] = Integer.parseInt(arr[2]); // set neighbor costs
+			  costs[Integer.parseInt(arr[1])-1] = Integer.parseInt(arr[2]);
 		  }
 		  
 	}
@@ -326,7 +339,7 @@ class UDPServer {
 				}
 		        for(int i = 0; i < neighbors.length; i++){
 		        	sendData = new byte[56];
-					String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+					String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
 					
 					sendData = data.getBytes();
 					
@@ -366,23 +379,26 @@ class UDPServer {
 	}
 	
 	// UPDATE LINK COST COMMAND
-	private void update(int fromID, int toID, int cost){
-		costs[toID-1] = cost;
-		
-		
-		byte[] sendData = new byte[56];
-    	InetAddress IPAddress = null;
-		try {
-			IPAddress = InetAddress.getLocalHost();
-		} catch (UnknownHostException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		
+	private void update(int fromID, int toID, String cost){
+		boolean isNeighbor = false;
 		
         for(int i = 0; i < neighbors.length; i++){
         	if (neighbors[i] == toID) {
+        		isNeighbor = true;
+        		if (cost.equals("inf")){
+        			costs[toID-1] = inf;
+        		} else {
+        			costs[toID-1] = Integer.parseInt(cost);
+        		}
+        		
+        		byte[] sendData = new byte[56];
+            	InetAddress IPAddress = null;
+        		try {
+        			IPAddress = InetAddress.getLocalHost();
+        		} catch (UnknownHostException e1) {
+        			// TODO Auto-generated catch block
+        			e1.printStackTrace();
+        		}
         		sendData = new byte[56];
     			String data = "UPDATE "+fromID+" "+toID+" "+cost;
     			
@@ -398,6 +414,9 @@ class UDPServer {
     				e.printStackTrace();
     			}
         	}
+        }
+        if(!isNeighbor){
+        	println("update ERROR: "+toID+" is not a neighbor");
         }
 	}
 	
@@ -415,7 +434,7 @@ class UDPServer {
 		}
         for(int i = 0; i < neighbors.length; i++){
         	sendData = new byte[56];
-			String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+			String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
 			
 			sendData = data.getBytes();
 			
@@ -447,9 +466,9 @@ class UDPServer {
 		  println("Dest | To | Cost |");
 		  for(int i = 0; i < numOfServers; i++){
 			  if(costs[i] == inf){
-				  println(id+"    | "+servers[i][0]+"  | inf    | "+timeIntervals[i]+"    |");
+				  println(id+"    | "+servers[i][0]+"  | inf    |");
 			  } else {
-				  println(id+"    | "+servers[i][0]+"  | "+costs[i]+"      | "+timeIntervals[i]+"    |");
+				  println(id+"    | "+servers[i][0]+"  | "+costs[i]+"      |");
 			  }
 		  }
 
