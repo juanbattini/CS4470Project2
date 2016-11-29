@@ -110,6 +110,7 @@ class UDPServer {
 		  		    	DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 		  		    	try {
 		  					serverSocket.receive(receivePacket);
+		  					
 		  				} catch (IOException e) {
 		  					println("ERROR: server socket receive failed for server id " + id);
 		  					e.printStackTrace();
@@ -130,10 +131,12 @@ class UDPServer {
 		  		    		timeIntervals[id-1] 	= interval; // set time interval of server of that id
 		  		    		receivedPackets[id-1] 	+= 1;		// increase packets received by one for that id
 		  		    		secondsMissed[id-1]		= 0;		// reset miss timer
+		  		    		println("RECEIVED A MESSAGE FROM SERVER "+id);
 		  		    	}
 		  		    	
-		  		    	if(args[0].equals("TEST")){ // Receiving test packet
-		  		    		println("Test: " + sentence);
+		  		    	if(args[0].equals("DISABLE")){ // Receiving disable command
+		  		    		clientSocket.close();
+		  		    		serverSocket.close();
 		  		    	}
 		  		    	
 		  	            receiveData = null;
@@ -148,7 +151,7 @@ class UDPServer {
 		switch (args[0]) {
 		case "server": // server -t <topology-file-name> -i <routing-update-interval>
 			if(args.length != 5){
-				println("ERROR: Invalid server command!");
+				println("server ERROR: Invalid server command");
 				break;
 			} else {
 				openTopo(args[2]);
@@ -161,13 +164,62 @@ class UDPServer {
 	    case "display":
 	    	display();
 	    	break;
-	    case "close":
+	    case "disable":
+	    	if(args.length != 2){
+				println("disable ERROR: invalid disable command");
+				break;
+			} else {
+				boolean isNeighbor = false;
+				int id = Integer.parseInt(args[1]);
+				for(int i = 0; i < neighbors.length; i++){
+					if (neighbors[i] == id){
+						isNeighbor = true;
+						sendDisable(neighbors[i]);
+						break;
+					}
+				}
+				if(isNeighbor == false){
+					println("disable ERROR: id is not a neighbor");
+				}
+				
+			}
+	    	break;
+	    case "crash":
 	    	  clientSocket.close();
 	    	  serverSocket.close();
 	    	  System.exit(0);
 	    	  break;
     	  
 	    }
+	}
+	
+	private void sendDisable(int toID){
+		InetAddress IPAddress = null;
+		try {
+			IPAddress = InetAddress.getLocalHost();
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		for(int i = 0; i < neighbors.length; i++){
+			if(neighbors[i] == toID){
+				byte[] sendData = new byte[56];
+				String data = "DISABLE " ;
+				
+				sendData = data.getBytes();
+				
+				int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
+				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+				
+				try {
+					clientSocket.send(sendPacket);
+					println("disable "+toID+" SUCCESS");
+				} catch (IOException e) {
+					println("disable "+toID+" ERROR: Couldn't disable ID "+toID);
+					e.printStackTrace();
+				}
+			}
+        }
 	}
 	
 	
@@ -269,7 +321,7 @@ class UDPServer {
 			    		costs[i] = inf;
 			    	}
 		    	}
-		    	display();
+//		    	display();
 		    }
 		};
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
