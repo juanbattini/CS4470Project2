@@ -119,7 +119,7 @@ class UDPServer {
 		  		    	String args[] = sentence.split(" ");
 		  		    	// Update Interval 
 		  		    	if(args[0].equals("UPDATE-INTERVAL") && args.length == 4){ // Receiving update packet
-		  		    		// if the first word in the packet is 'UPDATE'
+		  		    		// if the first word in the packet is 'UPDATE-INTERVAL'
 		  		    		// 2nd arg is id from sending server
 		  		    		int id = Integer.parseInt(args[1]);
 		  		    		// 3rd is the cost from the sending server
@@ -132,6 +132,25 @@ class UDPServer {
 		  		    		receivedPackets[id-1] 	+= 1;		// increase packets received by one for that id
 		  		    		secondsMissed[id-1]		= 0;		// reset miss timer
 		  		    		println("RECEIVED A MESSAGE FROM SERVER "+id);
+		  		    	}
+		  		    	
+		  		    	if(args[0].equals("UPDATE")){ // Receiving update link command
+		  		    	// if the first word in the packet is 'UPDATE'
+		  		    		// 3rd is the id of this id
+		  		    		int toID = Integer.parseInt(args[2]);
+		  		    		if(id == toID){
+		  		    			// 2nd arg is id from sending server
+			  		    		int fromID = Integer.parseInt(args[1]);
+			  		    		
+			  		    		// 4th is cost of link
+			  		    		int cost = Integer.parseInt(args[3].trim());
+			  		    		servers[fromID-1][3] 		= "1"; 		// server is online
+			  		    		costs[fromID-1] 			= cost;		//neighbor cost
+			  		    		receivedPackets[fromID-1] 	+= 1;		// increase packets received by one for that id
+			  		    		secondsMissed[fromID-1]		= 0;		// reset miss timer
+			  		    		println("RECEIVED A MESSAGE FROM SERVER "+fromID);
+		  		    		}
+		  		    		
 		  		    	}
 		  		    	
 		  		    	if(args[0].equals("DISABLE")){ // Receiving disable command
@@ -161,6 +180,24 @@ class UDPServer {
 				checkDisconnect();
 			}
 			break;
+		case "update":
+			if(args.length != 4){
+				println("update ERROR: Invalid update command");
+				break;
+			} else {
+				int id1 = Integer.parseInt(args[1]);
+				int id2 = Integer.parseInt(args[2]);
+				int cost = Integer.parseInt(args[3]);
+				update(id1, id2, cost);
+			}
+			
+			break;	
+		case "step":
+			step();
+			break;
+		case "packets":
+	    	packets();
+	    	break;
 	    case "display":
 	    	display();
 	    	break;
@@ -181,7 +218,6 @@ class UDPServer {
 				if(isNeighbor == false){
 					println("disable ERROR: id is not a neighbor");
 				}
-				
 			}
 	    	break;
 	    case "crash":
@@ -275,6 +311,7 @@ class UDPServer {
 		  
 	}
 	
+
 	// Routing Update on time interval
 	private void routingUpdate(int seconds){
 		Runnable broadcast = new Runnable() {
@@ -299,7 +336,7 @@ class UDPServer {
 					try {
 						clientSocket.send(sendPacket);
 					} catch (IOException e) {
-						println("Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
+						println("update ERROR: Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
 						e.printStackTrace();
 					}
 		        }
@@ -328,7 +365,98 @@ class UDPServer {
 		executor.scheduleAtFixedRate(checkDisconnects, 0, 1, TimeUnit.SECONDS);
 	}
 	
+	// UPDATE LINK COST COMMAND
+	private void update(int fromID, int toID, int cost){
+		costs[toID-1] = cost;
+		
+		
+		byte[] sendData = new byte[56];
+    	InetAddress IPAddress = null;
+		try {
+			IPAddress = InetAddress.getLocalHost();
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		
+		
+        for(int i = 0; i < neighbors.length; i++){
+        	if (neighbors[i] == toID) {
+        		sendData = new byte[56];
+    			String data = "UPDATE "+fromID+" "+toID+" "+cost;
+    			
+    			sendData = data.getBytes();
+    			
+    			int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
+    			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+    			
+    			try {
+    				clientSocket.send(sendPacket);
+    			} catch (IOException e) {
+    				println("update ERROR: Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
+    				e.printStackTrace();
+    			}
+        	}
+        }
+	}
+	
+	
+	
+	// STEP COMMAND
+	private void step(){
+		byte[] sendData = new byte[56];
+    	InetAddress IPAddress = null;
+		try {
+			IPAddress = InetAddress.getLocalHost();
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+        for(int i = 0; i < neighbors.length; i++){
+        	sendData = new byte[56];
+			String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+			
+			sendData = data.getBytes();
+			
+			int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
+			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+			
+			try {
+				clientSocket.send(sendPacket);
+			} catch (IOException e) {
+				println("step ERROR: Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
+				e.printStackTrace();
+			}
+        }
+	}
+	
+	private void packets(){
+		int numOfPackets = 0;
+		for(int i = 0; i < numOfServers; i++){
+			numOfPackets += receivedPackets[i];
+			receivedPackets[i] = 0;
+		}
+		println("packets received: "+numOfPackets);
+		println("packets SUCCESS");
+	}
+	
+	
 	public void display(){
+		  println("====Routing Table====");
+		  println("Dest | To | Cost |");
+		  for(int i = 0; i < numOfServers; i++){
+			  if(costs[i] == inf){
+				  println(id+"    | "+servers[i][0]+"  | inf    | "+timeIntervals[i]+"    |");
+			  } else {
+				  println(id+"    | "+servers[i][0]+"  | "+costs[i]+"      | "+timeIntervals[i]+"    |");
+			  }
+		  }
+
+		  println("=====================");
+	}
+	
+	public void displayTest(){
 		  println("====Routing Table====");
 		  println("To | Cost | Time | PRcv | PMis | Smis");
 		  for(int i = 0; i < numOfServers; i++){
