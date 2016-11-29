@@ -293,7 +293,7 @@ class UDPServer {
 		executor.scheduleAtFixedRate(broadcast, 0, seconds, TimeUnit.SECONDS);
 	}
 	
-	private void convertToGMF(DatagramPacket packet) {
+	private void sendMessage(DatagramPacket packet) {
 		//	byte[] buffer = new byte[1024]; 
 		//	println(new String(buffer, 0, p.getLength()));
 		/*
