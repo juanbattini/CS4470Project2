@@ -17,6 +17,7 @@ class UDPServer {
 	public int numOfServers;
 	public int numOfNeighbors;
 	private int id;
+	private String IP;
 	private int port;
 	private int updateInterval;
 	private static String[][] servers = new String[4][4]; // 0:id, 1:destination, 2:port of other servers, 3:online(1=true, 0=false) 
@@ -70,8 +71,7 @@ class UDPServer {
 		  		    	  // TODO Auto-generated catch block
 		  		    	  e.printStackTrace();
 		  		      }
-		  		      byte[] sendData = new byte[1024];
-		  		      byte[] receiveData = new byte[1024];
+		  		      byte[] sendData = new byte[56];
 		  		      String sentence = null;
 					  try {
 						  sentence = inFromUser.readLine();
@@ -94,7 +94,6 @@ class UDPServer {
 				  		  }
 		  		      }
 		  		      sendData = null;
-		  		      receiveData = null; 
 	  		      }	  		     
 		    }
 		};
@@ -103,12 +102,11 @@ class UDPServer {
 	public void defineReceiverThread(DatagramSocket serverSocket, int id) {
 		// RECEIVER Thread
 		this.receiver = new Thread() {
-			byte[] receiveData = new byte[1024];
-	    	byte[] sendData = new byte[1024];
+			byte[] receiveData = new byte[56];
 			public void run() {
 	  		      while(true) {
-	  		    	  	receiveData = new byte[1024];
-	  		    	  	//sendData = new byte[1024];
+	  		    	  	receiveData = new byte[56];
+	  		    	  	//sendData = new byte[4];
 		  		    	DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 		  		    	try {
 		  					serverSocket.receive(receivePacket);
@@ -118,7 +116,8 @@ class UDPServer {
 		  				}
 		  		    	String sentence = new String( receivePacket.getData());
 		  		    	String args[] = sentence.split(" ");
-		  		    	if(args[0].equals("UPDATE") && args.length == 4){ // Receiving update packet
+		  		    	// Update Interval 
+		  		    	if(args[0].equals("UPDATE-INTERVAL") && args.length == 4){ // Receiving update packet
 		  		    		// if the first word in the packet is 'UPDATE'
 		  		    		// 2nd arg is id from sending server
 		  		    		int id = Integer.parseInt(args[1]);
@@ -130,23 +129,14 @@ class UDPServer {
 		  		    		costs[id-1] 			= cost;		//neighbor cost
 		  		    		timeIntervals[id-1] 	= interval; // set time interval of server of that id
 		  		    		receivedPackets[id-1] 	+= 1;		// increase packets received by one for that id
-		  		    		secondsMissed[id-1]		= 0;
-//		  		    		for(int i = 0; i < neighbors.length; i++){
-//		  		    			if(neighbors[i] == id){
-//
-//		  		    			}
-//		  		    		}	
+		  		    		secondsMissed[id-1]		= 0;		// reset miss timer
 		  		    	}
-		  		    	
 		  		    	
 		  		    	if(args[0].equals("TEST")){ // Receiving test packet
 		  		    		println("Test: " + sentence);
 		  		    	}
 		  		    	
-//		  		    	println("Server>");
-		  		    	
 		  	            receiveData = null;
-		  	            sendData = null;
 	  		      }
   		    }
 		};
@@ -166,6 +156,7 @@ class UDPServer {
 				openServerSocket(this.id, this.port);
 				routingUpdate(this.updateInterval);
 				checkDisconnect();
+				getIPAddress();
 			}
 			break;
 	    
@@ -196,6 +187,7 @@ class UDPServer {
 		    System.err.format("Exception occurred trying to read '%s'.", filename);
 		    e.printStackTrace();
 		  } 
+		  
 		  // GET number of servers from topology
 		  String nosarr[] = records.get(0).split(" ");
 		  this.numOfServers = Integer.parseInt(nosarr[0]);
@@ -237,8 +229,8 @@ class UDPServer {
 	private void routingUpdate(int seconds){
 		Runnable broadcast = new Runnable() {
 		    public void run() {
-		    	byte[] sendData = new byte[1024];
-				byte[] receiveData = new byte[1024];
+		    	byte[] sendData = new byte[4];
+				byte[] receiveData = new byte[4];
 		    	InetAddress IPAddress = null;
 				try {
 					IPAddress = InetAddress.getLocalHost();
@@ -247,14 +239,14 @@ class UDPServer {
 					e1.printStackTrace();
 				}
 		        for(int i = 0; i < neighbors.length; i++){
-//		        			         	  --id-- 				           --IP destination--				        --port--
-//		            println("send this to "+servers[neighbors[i]-1][0]+" "+servers[neighbors[i]-1][1]+" "+servers[neighbors[i]-1][2]);
-		        	sendData = new byte[1024];
-					receiveData = new byte[1024];
-					String data = "UPDATE "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
-
+		        	sendData = new byte[56];
+					receiveData = new byte[56];
+					String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+					
+					
+					
 					sendData = data.getBytes();
-//					int sendToPort = Integer.parseInt(servers[neighbors[i][0]-1][2]);
+					
 					int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
 					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
 					try {
