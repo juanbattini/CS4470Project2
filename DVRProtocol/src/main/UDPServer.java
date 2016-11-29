@@ -156,10 +156,8 @@ class UDPServer {
 				openServerSocket(this.id, this.port);
 				routingUpdate(this.updateInterval);
 				checkDisconnect();
-				getIPAddress();
 			}
 			break;
-	    
 	    case "display":
 	    	display();
 	    	break;
@@ -229,8 +227,7 @@ class UDPServer {
 	private void routingUpdate(int seconds){
 		Runnable broadcast = new Runnable() {
 		    public void run() {
-		    	byte[] sendData = new byte[4];
-				byte[] receiveData = new byte[4];
+		    	byte[] sendData = new byte[56];
 		    	InetAddress IPAddress = null;
 				try {
 					IPAddress = InetAddress.getLocalHost();
@@ -240,15 +237,13 @@ class UDPServer {
 				}
 		        for(int i = 0; i < neighbors.length; i++){
 		        	sendData = new byte[56];
-					receiveData = new byte[56];
 					String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
-					
-					
 					
 					sendData = data.getBytes();
 					
 					int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
 					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+					
 					try {
 						clientSocket.send(sendPacket);
 					} catch (IOException e) {
@@ -313,9 +308,9 @@ class UDPServer {
 	}
 	
 	//-------GET FUNCTIONS-----------
-	public InetAddress getIPAddress(){
+	public String getIPAddress(){
 		try {
-			return InetAddress.getLocalHost();
+			return InetAddress.getLocalHost().getHostAddress();
 		} catch (UnknownHostException e) {
 			println("ERROR: Couldn't get Local Host from server id "+this.id);
 			e.printStackTrace();
