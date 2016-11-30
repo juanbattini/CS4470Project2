@@ -134,6 +134,39 @@ class UDPServer {
 		  		    		println("RECEIVED A MESSAGE FROM SERVER "+id);
 		  		    	}
 		  		    	
+//		  		    	String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
+//						for(int i = 0; i < numOfServers; i++){
+//							data += " "+servers[i][0]+" "+costs[i];
+//						}
+						
+//		  		    	if(args[0].equals("UPDATE-INTERVAL") && args.length == 11){ // Receiving update packet
+//		  		    		println("receive:");
+//		  		    		println(sentence);
+//		  		    		int fromID = Integer.parseInt(args[1]);
+//		  		    		int interval = Integer.parseInt(args[2]);
+//		  		    		timeIntervals[fromID-1] 	= interval; // set time interval of server of that id
+//		  		    		receivedPackets[fromID-1] 	+= 1;		// increase packets received by one for that id
+//		  		    		secondsMissed[fromID-1]		= 0;		// reset miss timer
+//		  		    		for(int i = 0; i < numOfServers; i++){
+//		  		    			
+//		  		    			if (id!=(i+1) && initCosts[i] != inf){
+//		  		    				if(args[4+(i*2)].equals("inf") || args[4+(i*2)].trim() == "inf" || args[4+(i*2)].trim().equals("inf")){
+//			  		    				if(costs[i] > inf){
+//			  		    					costs[i] = inf;
+//			  		    				} 
+//		  		    					
+//			  		    			} else {
+//			  		    				if(costs[i] > Integer.parseInt(args[4+(i*2)].trim())){
+//			  		    					costs[i] = Integer.parseInt(args[4+(i*2)].trim());
+//			  		    				}
+//			  		    			}
+//		  		    			}
+//							}
+//		  		    		costs[id-1] = 0;
+//		  		    		costs[fromID-1]=initCosts[fromID-1];
+//
+//		  		    	}
+		  		    	
 		  		    	if(args[0].equals("UPDATE")){ // Receiving update link command
 		  		    	// if the first word in the packet is 'UPDATE'
 		  		    		// 3rd is the id of this id
@@ -152,14 +185,11 @@ class UDPServer {
 			  		    		
 			  		    		servers[fromID-1][3] 		= "1"; 		// server is online
 			  		    		costs[fromID-1] 			= cost;		//neighbor cost
+			  		    		initCosts[fromID-1] 		= cost;	
 			  		    		receivedPackets[fromID-1] 	+= 1;		// increase packets received by one for that id
 			  		    		secondsMissed[fromID-1]		= 0;		// reset miss timer
 			  		    		println("RECEIVED A MESSAGE FROM SERVER "+fromID);
 		  		    		}
-		  		    		for(int i= 0; i < 4; i++){
-		  		    			println(costs[i]);
-		  		    		}
-		  		    		
 		  		    	}
 		  		    	
 		  		    	if(args[0].equals("DISABLE")){ // Receiving disable command
@@ -231,6 +261,7 @@ class UDPServer {
 	    case "crash":
 	    	  clientSocket.close();
 	    	  serverSocket.close();
+	    	  System.exit(0);
 	    	  break;
 	    case "close":
 	    	  clientSocket.close();
@@ -337,14 +368,25 @@ class UDPServer {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
+				
+//				String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
+//				for(int i = 0; i < numOfServers; i++){
+//					if(initCosts[i] == inf){
+//						data += " "+servers[i][0]+" inf";
+//					} else {
+//						data += " "+servers[i][0]+" "+initCosts[i];
+//					}
+//				}
+//				println(data);
+				
 		        for(int i = 0; i < neighbors.length; i++){
 		        	sendData = new byte[56];
-					String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
-					
+					String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+
 					sendData = data.getBytes();
-					
 					int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
 					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, sendToPort);
+					
 					
 					try {
 						clientSocket.send(sendPacket);
@@ -352,7 +394,10 @@ class UDPServer {
 						println("update ERROR: Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
 						e.printStackTrace();
 					}
+					data = null;
 		        }
+		        sendData = null;
+
 		    }
 		};
 		ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
@@ -432,9 +477,19 @@ class UDPServer {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		
+		String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
+		for(int i = 0; i < numOfServers; i++){
+			if(costs[i] == inf){
+				data += " "+servers[i][0]+" inf";
+			} else {
+				data += " "+servers[i][0]+" "+costs[i];
+			}
+		}
+		
         for(int i = 0; i < neighbors.length; i++){
         	sendData = new byte[56];
-			String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
+//			String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
 			
 			sendData = data.getBytes();
 			
@@ -521,5 +576,32 @@ class UDPServer {
 		return this.serverSocket.getLocalPort();
 	}
 
+//	byte[] numOfUpdates = new byte[2];
+//	byte[] serverPort = new byte[2];
+//	byte[] serverIP = new byte[4];
+//	
+//	byte[] serverIP1 = new byte[4];
+//	byte[] serverPort1 = new byte[2];
+//	byte[] empty1 = new byte[2];
+//	byte[] serverID1 = new byte[2];
+//	byte[] serverCost1 = new byte[2];
+//	
+//	byte[] serverIP2 = new byte[4];
+//	byte[] serverPort2 = new byte[2];
+//	byte[] empty2 = new byte[2];
+//	byte[] serverID2 = new byte[2];
+//	byte[] serverCost2 = new byte[2];
+//	
+//	byte[] serverIP3 = new byte[4];
+//	byte[] serverPort3 = new byte[2];
+//	byte[] empty3 = new byte[2];
+//	byte[] serverID3 = new byte[2];
+//	byte[] serverCost3 = new byte[2];
+//	
+//	byte[] serverIP4 = new byte[4];
+//	byte[] serverPort4 = new byte[2];
+//	byte[] empty4 = new byte[2];
+//	byte[] serverID4 = new byte[2];
+//	byte[] serverCost4 = new byte[2];
 	
 }
