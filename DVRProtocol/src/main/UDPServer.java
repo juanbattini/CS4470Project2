@@ -134,6 +134,7 @@ class UDPServer {
 		  		    		println("RECEIVED A MESSAGE FROM SERVER "+id);
 		  		    	}
 		  		    	
+<<<<<<< HEAD
 		  		    	if(args[0].equals("?") && args.length == 3){ 
 		  		    		int fromID = Integer.parseInt(args[1]);
 		  		    		// ID in question INFINITY
@@ -171,6 +172,8 @@ class UDPServer {
 		  		    	}
 		  		    	
 		  		    	
+=======
+>>>>>>> origin/master
 //		  		    	String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
 //						for(int i = 0; i < numOfServers; i++){
 //							data += " "+servers[i][0]+" "+costs[i];
@@ -431,11 +434,18 @@ class UDPServer {
 						println("update ERROR: Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
 						e.printStackTrace();
 					}
+<<<<<<< HEAD
 					
 					data = null;					
 		        }
 		        sendData = null;
 		        askInf();
+=======
+					data = null;
+		        }
+		        sendData = null;
+
+>>>>>>> origin/master
 		    }
 		    
 		};
@@ -554,6 +564,7 @@ class UDPServer {
 			e1.printStackTrace();
 		}
 		
+<<<<<<< HEAD
 //		String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
 //		for(int i = 0; i < numOfServers; i++){
 //			if(costs[i] == inf){
@@ -562,11 +573,25 @@ class UDPServer {
 //				data += " "+servers[i][0]+" "+costs[i];
 //			}
 //		}
+=======
+		String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
+		for(int i = 0; i < numOfServers; i++){
+			if(costs[i] == inf){
+				data += " "+servers[i][0]+" inf";
+			} else {
+				data += " "+servers[i][0]+" "+costs[i];
+			}
+		}
+>>>>>>> origin/master
 		
         for(int i = 0; i < neighbors.length; i++){
         	sendData = new byte[56];
 //			String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
+<<<<<<< HEAD
 			String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
+=======
+			
+>>>>>>> origin/master
 			sendData = data.getBytes();
 			
 			int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
