@@ -67,6 +67,7 @@ class UDPServer {
 		  		      sendToPort = -1;
 		  		      try {
 		  		    	  IPAddress = InetAddress.getLocalHost();
+//		  		    	  IPAddress = InetAddress.getByName(servers[fromID-1][1]);
 		  		      } catch (UnknownHostException e) {
 		  		    	  // TODO Auto-generated catch block
 		  		    	  e.printStackTrace();
@@ -134,7 +135,6 @@ class UDPServer {
 		  		    		println("RECEIVED A MESSAGE FROM SERVER "+id);
 		  		    	}
 		  		    	
-<<<<<<< HEAD
 		  		    	if(args[0].equals("?") && args.length == 3){ 
 		  		    		int fromID = Integer.parseInt(args[1]);
 		  		    		// ID in question INFINITY
@@ -142,7 +142,8 @@ class UDPServer {
 		  		    		byte[] sendData = new byte[56];
 			  		      	InetAddress IPAddress = null;
 			  		  		try {
-			  		  			IPAddress = InetAddress.getLocalHost();
+//			  		  			IPAddress = InetAddress.getLocalHost();
+			  		  			IPAddress = InetAddress.getByName(servers[fromID-1][1]);
 			  		  		} catch (UnknownHostException e1) {
 			  		  			// TODO Auto-generated catch block
 			  		  			e1.printStackTrace();
@@ -168,12 +169,14 @@ class UDPServer {
 		  		    		// ID in question INFINITY
 		  		    		int idINF = Integer.parseInt(args[2]);
 		  		    		int cost = Integer.parseInt(args[3].trim());
-		  		    		costs[idINF-1] = (cost+costs[fromID-1]);
+		  		    		int totalCost = cost+costs[fromID-1];
+		  		    		if (costs[idINF-1] > totalCost){
+		  		    			costs[idINF-1] = totalCost;
+		  		    		}
+		  		    		
 		  		    	}
 		  		    	
 		  		    	
-=======
->>>>>>> origin/master
 //		  		    	String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
 //						for(int i = 0; i < numOfServers; i++){
 //							data += " "+servers[i][0]+" "+costs[i];
@@ -313,15 +316,19 @@ class UDPServer {
 	}
 	
 	private void sendDisable(int toID){
-		InetAddress IPAddress = null;
-		try {
-			IPAddress = InetAddress.getLocalHost();
-		} catch (UnknownHostException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+		
+		
 		for(int i = 0; i < neighbors.length; i++){
 			if(neighbors[i] == toID){
+				InetAddress IPAddress = null;
+				try {
+//					IPAddress = InetAddress.getLocalHost();
+					IPAddress = InetAddress.getByName(servers[neighbors[i]-1][1]);
+					
+				} catch (UnknownHostException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				byte[] sendData = new byte[56];
 				String data = "DISABLE " ;
 				
@@ -401,25 +408,20 @@ class UDPServer {
 		Runnable broadcast = new Runnable() {
 		    public void run() {
 		    	byte[] sendData = new byte[56];
-		    	InetAddress IPAddress = null;
-				try {
-					IPAddress = InetAddress.getLocalHost();
-				} catch (UnknownHostException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+		    	
 				
-//				String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
-//				for(int i = 0; i < numOfServers; i++){
-//					if(initCosts[i] == inf){
-//						data += " "+servers[i][0]+" inf";
-//					} else {
-//						data += " "+servers[i][0]+" "+initCosts[i];
-//					}
-//				}
-//				println(data);
+
 				
 		        for(int i = 0; i < neighbors.length; i++){
+		        	InetAddress IPAddress = null;
+					try {
+//						IPAddress = InetAddress.getLocalHost();
+						IPAddress = InetAddress.getByName(servers[neighbors[i]-1][1]);
+						
+					} catch (UnknownHostException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 		        	sendData = new byte[56];
 					String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
 
@@ -434,18 +436,11 @@ class UDPServer {
 						println("update ERROR: Couldn't send packet to id: " + servers[neighbors[i]-1][0] + ", port: "+ sendToPort);
 						e.printStackTrace();
 					}
-<<<<<<< HEAD
 					
 					data = null;					
 		        }
 		        sendData = null;
 		        askInf();
-=======
-					data = null;
-		        }
-		        sendData = null;
-
->>>>>>> origin/master
 		    }
 		    
 		};
@@ -455,16 +450,18 @@ class UDPServer {
 	
 	private void askInf(){
 		byte[] sendData = new byte[56];
-    	InetAddress IPAddress = null;
-		try {
-			IPAddress = InetAddress.getLocalHost();
-		} catch (UnknownHostException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+    	
 		
         for(int i = 0; i < neighbors.length; i++){
         	for(int j = 0; j < numOfServers; j++){
+        		InetAddress IPAddress = null;
+        		try {
+//        			IPAddress = InetAddress.getLocalHost();
+        			IPAddress = InetAddress.getByName(servers[neighbors[i]-1][1]);
+        		} catch (UnknownHostException e1) {
+        			// TODO Auto-generated catch block
+        			e1.printStackTrace();
+        		}
 	        	sendData = new byte[56];
 	        	if(costs[j] == inf){
 	        		String data = "? "+id+" "+servers[j][0];
@@ -525,7 +522,8 @@ class UDPServer {
         		byte[] sendData = new byte[56];
             	InetAddress IPAddress = null;
         		try {
-        			IPAddress = InetAddress.getLocalHost();
+//        			IPAddress = InetAddress.getLocalHost();
+        			IPAddress = InetAddress.getByName(servers[neighbors[i]-1][1]);
         		} catch (UnknownHostException e1) {
         			// TODO Auto-generated catch block
         			e1.printStackTrace();
@@ -556,15 +554,8 @@ class UDPServer {
 	// STEP COMMAND
 	private void step(){
 		byte[] sendData = new byte[56];
-    	InetAddress IPAddress = null;
-		try {
-			IPAddress = InetAddress.getLocalHost();
-		} catch (UnknownHostException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+    	
 		
-<<<<<<< HEAD
 //		String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
 //		for(int i = 0; i < numOfServers; i++){
 //			if(costs[i] == inf){
@@ -573,25 +564,19 @@ class UDPServer {
 //				data += " "+servers[i][0]+" "+costs[i];
 //			}
 //		}
-=======
-		String data = "UPDATE-INTERVAL "+id+" "+updateInterval;
-		for(int i = 0; i < numOfServers; i++){
-			if(costs[i] == inf){
-				data += " "+servers[i][0]+" inf";
-			} else {
-				data += " "+servers[i][0]+" "+costs[i];
-			}
-		}
->>>>>>> origin/master
 		
         for(int i = 0; i < neighbors.length; i++){
+        	InetAddress IPAddress = null;
+    		try {
+//    			IPAddress = InetAddress.getLocalHost();
+    			IPAddress = InetAddress.getByName(servers[neighbors[i]-1][1]);
+    		} catch (UnknownHostException e1) {
+    			// TODO Auto-generated catch block
+    			e1.printStackTrace();
+    		}
         	sendData = new byte[56];
 //			String data = "UPDATE-INTERVAL "+id+" "+costs[neighbors[i]-1]+" "+updateInterval ;
-<<<<<<< HEAD
 			String data = "UPDATE-INTERVAL "+id+" "+initCosts[neighbors[i]-1]+" "+updateInterval ;
-=======
-			
->>>>>>> origin/master
 			sendData = data.getBytes();
 			
 			int sendToPort = Integer.parseInt(servers[neighbors[i]-1][2]);
